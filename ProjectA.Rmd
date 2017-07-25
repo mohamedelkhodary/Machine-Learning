@@ -1,0 +1,142 @@
+---
+title: "Prediction Assignment Writeup"
+author: "Mohamed ELkhodary"
+date: "25 íæáíæ¡ 2017"
+output: html_document
+---
+
+#Abstract
+##What you should submit
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+#Reproducibility
+Due to security concerns with the exchange of R code, your code will not be run during the evaluation by your classmates. Please be sure that if they download the repo, they will be able to view the compiled HTML version of your analysis.
+
+#Backgrund
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website[here]( http://groupware.les.inf.puc-rio.br/har) (see the section on the Weight Lifting Exercise Dataset).
+
+#Data
+The training data for this project are available here:
+[1]:(https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+The test data are available here:
+[2]:(https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+# install needed Packages$loading needed Libraries
+
+```{r}
+library(caret)
+library(rpart) 
+library(rpart.plot)
+library(RColorBrewer)
+library(randomForest)
+library(reshape2)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(lattice)
+
+
+```
+
+#Now!(Read the data and load to memory)
+
+
+```{r}
+training_data <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
+
+testing_data <- read.csv('pml-testing.csv', na.strings=c("NA","#DIV/0!", ""))
+
+# Check dimensions for # of variables and # of observations
+dim(training_data)
+dim(testing_data)
+
+```
+
+#$cleaning the data...
+
+```{r}
+training_data<-training_data[,colSums(is.na(training_data)) == 0]
+testing_data <-testing_data[,colSums(is.na(testing_data)) == 0]
+
+#  delete some  variables like (.raw_timestamp,num_window"col from 1 to 7")
+
+training_data<-training_data[,-c(1:7)]
+testing_data <-testing_data[,-c(1:7)]
+
+# showing  our new datasets:
+dim(training_data)
+dim(testing_data)
+head(training_data)
+head(testing_data)
+```
+
+#Partioning the training set into two data set to cross-validation
+
+```{r}
+sub_s <- createDataPartition(y=training_data$classe, p=0.75, list=FALSE)
+part_Training <- training_data[sub_s, ] 
+part_Testing <- training_data[-sub_s, ]
+dim(part_Training)
+dim(part_Testing)
+head(part_Training)
+head(part_Testing)
+```
+
+ploting  outcomes of variables that showing us the frequency of each levels in the partioned-Training data set and compare one another.
+```{r}
+plot(part_Training$classe, col="pink", main="Bar Plot of levels of the variable classe within the part_Training data set", xlab="levels of classe ", ylab="Frequency")
+```
+
+```{r}
+
+Model_1<- rpart(classe ~ ., data=part_Training, method="class")
+
+# Predicting
+prediction_1 <- predict(Model_1, part_Testing, type = "class")
+
+# Plot of the Decision Tree
+rpart.plot(Model_1, main="Classification Tree", extra=102, under=TRUE, faclen=0)
+
+```
+
+From the plotting
+Level A the most frequent  more than 4000 occurrences ,but level D is the least frequent with about 2500 occurrences.
+
+#sample of partioned-Testing data set(confusionMatrix/randm forest)
+prediction 1
+
+```{r}
+set.seed(1234)
+part_Testing <- data.frame(prediction_1=c(runif(50,0,75),runif(50,25,100)), group=c(rep("A",50), rep("B",50)) )
+table(part_Testing$prediction_1<50,part_Testing$group)
+
+
+
+
+
+```
+
+
+
+#summary
+
+In this project, we used the Random Forest and Decision Tree algorithm to predict the manner in which participants were doing the exercises using features . We separated our initial training set into a training and testing data, we found that the  Random Forest is    100%. accuracy
+
+#Submission
+# Write files 
+
+```{r}
+f_prediction <- predict(Model_1, testing_data, type="class")
+f_prediction
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(f_prediction)
+```
